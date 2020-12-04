@@ -1,0 +1,5 @@
+youtube-dl
+discord.py
+defusedxml
+bs4
+python-youtube
