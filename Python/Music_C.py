@@ -4,7 +4,7 @@ from EssentialPackages import *
 from Command import *
 from Music import *
 from Footer import get_footer
-HAL_ID = 779155599622537226
+HAL_ID = 663923530626367509
 
 async def PLAY(message,serverinfo,client):
     serverinfo[message.guild].Leave = False
@@ -19,7 +19,7 @@ async def PLAY(message,serverinfo,client):
     if message.guild.voice_client == None:
         await channel.connect()
     else:
-         await message.guild.get_member(HAL_ID).edit(voice_channel = channel)
+        await message.guild.get_member(HAL_ID).edit(voice_channel = channel)
     if len(serverinfo[message.guild].Queue)<1:
         serverinfo[message.guild].QueueList="\nNo Songs In Queue"
     if serverinfo[message.guild].currentlyplaying == True:
@@ -77,7 +77,8 @@ async def PLAY(message,serverinfo,client):
                     serverinfo[message.guild].Duration = str(minutes)+":"+"0"+str(seconds)
                 else:
                     serverinfo[message.guild].Duration = str(minutes)+":"+str(seconds)
-        if serverinfo[message.guild].Player.duration < 1:
+        if serverinfo[message.guild].Player.duration == 0:
+            print("CurrentlyLive")
             serverinfo[message.guild].Live = True
         import time
         sec = serverinfo[message.guild].Player.duration
@@ -193,11 +194,11 @@ async def PLAY(message,serverinfo,client):
 
 
 async def SKIP(message,serverinfo,client):
-    serverinfo[message.guild].Skip = True
     if serverinfo[message.guild].Player == None:
         await message.channel.send("`Hal is not in a voice channel`")
     if serverinfo[message.guild].Player!=None:
         if message.guild.voice_client.is_playing():
+            serverinfo[message.guild].Skip = True
             serverinfo[message.guild].Resume = True
             serverinfo[message.guild].Pause= False
             message.guild.voice_client.stop()
@@ -210,8 +211,9 @@ async def LEAVE (message,serverinfo,client):
     if serverinfo[message.guild].Player == None:
             await message.channel.send("`Hal Is Not In A Voice Channel`")
     if serverinfo[message.guild].Player != None:
+        print ("Leave")
         serverinfo[message.guild].Leave = True
-        serverinfo[message.guild].songended = True:
+        serverinfo[message.guild].Skip = True
         serverinfo[message.guild].Queue = []
         await message.guild.voice_client.disconnect()
         #Player = None
