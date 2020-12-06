@@ -35,12 +35,15 @@ class Server:
         self.loading = False
         self.mHandler = None
         self.server=server
+        self.SongEndedTime=datetime.datetime.now()
+        self.LeaveMSG=None
 
     async def update_loop(self):
         print ("Hal Activated...")
         while True:
             if self.currentlyplaying and self.Player != None and self.Music_SOS != None:
                 timenow = datetime.datetime.now()
+                self.SongEndedTime=datetime.datetime.now()
                 self.Background = (timenow - self.starttime).seconds + self.Secondoffset
                 self.Second = (timenow - self.starttime).seconds
                 self.Minute = int(self.Minute)-(self.Hour*60)
@@ -58,25 +61,23 @@ class Server:
                         self.Progress = str(self.Minute)+":"+"0"+str(self.Background)
                     else:
                         self.Progress = str(self.Minute)+":"+str(self.Background)
-
                 print(self.Second)
-
                 import time
                 timenow = datetime.datetime.now()
                 second = (timenow - self.starttime).seconds + self.Secondoffset
-                Description = str(self.Progress)
+                Description = str(self.Progress) + "/" + str(self.Duration)
                 if self.Live == True:
                     Description = "Currently Live"
                 if self.Pause == True:
                     Description = "Paused"
-                em = discord.Embed(title="" , description=("["+ self.Player.title + "]" "("+self.Player.url+")"+ "\n" + '**' + 'Duration: ' + '**' + '`'  +  Description + "/" + str(self.Duration) + "`" +   '\n' + '**' + 'Volume:  '+ '**' + "``" + str(self.Volume) + "%" + "``" + "\n"  + "**" + "Queue:" + "**" + str(self.QueueList)), colour=3447003)
+                em = discord.Embed(title="" , description=("["+ self.Player.title + "]" "("+self.Player.url+")"+ "\n" + '**' + 'Duration: ' + '**' + '`'  +  Description  + "`" +   '\n' + '**' + 'Volume:  '+ '**' + "``" + str(self.Volume) + "%" + "``" + "\n"  + "**" + "Queue:" + "**" + str(self.QueueList)), colour=3447003)
                 em.set_author(name="Selected By: " + str(self.MusicAuthor),icon_url=self.MusicAuthor.avatar_url)
                 em.set_footer(text=get_footer())
                 try:
                     await self.Music_SOS.edit(embed=em)
                 except discord.errors.NotFound:
                      self.Music_SOS = await self.MusicTextChannel.send(embed = em)
-                if self.second == 30:
+                if self.Second%60 == 30:
                     await self.Music_SOS.delete()
                     self.Music_SOS = await self.MusicTextChannel.send(embed = em)
                 if self.Background >= 59:
@@ -87,8 +88,19 @@ class Server:
                     self.Minute = int(self.Minute)
                     self.Minute = 0
                     self.Hour += 1
-                if self.LeaveVC or self.Skip or self.Second >= self.Player.duration:
+                if self.Player.duration == 0:
+                    self.Live = True
+                if self.LeaveVC or self.Skip or (self.Second >= self.Player.duration and not self.Live):
+                    print (self.LeaveVC)
+                    print(self.Skip)
+                    print(self.Live)
+                    print(self.Second)
+                    print(self.Player.duration)
                     self.currentlyplaying=False
+                    self.Live = False
+                    self.LeaveVC = False
+                    self.Player = None
+                    self.SongEndedTime = datetime.datetime.now()
                     print("Song ended")
                     self.Secondoffset = 0
                     self.Second = 0
@@ -96,6 +108,7 @@ class Server:
                     self.starttime = datetime.datetime.now()
                     timenow = datetime.datetime.now()
                     await self.Music_SOS.delete()
+                    self.Music_SOS = None
                     if len(self.Queue) > 0:
                         print("Song in queue")
                         self.Second = 0
@@ -138,4 +151,11 @@ class Server:
                         em.set_author(name="Selected By: " + str(self.MusicAuthor),icon_url=self.MusicAuthor.avatar_url)
                         em.set_footer(text=get_footer())
                         self.Music_SOS = await self.MusicTextChannel.send(embed = em)
+            else:
+                if (datetime.datetime.now() - self.SongEndedTime).seconds >= 30 and self.LeaveMSG == None:
+                    await self.server.voice_client.disconnect()
+                    self.LeaveMSG = await self.MusicTextChannel.send("`Hal has left the voice channel`")
+                if (datetime.datetime.now() - self.SongEndedTime).seconds >= 120 and self.LeaveMSG != None:
+                    await self.LeaveMSG.delete()
+                    self.LeaveMSG=None
             await asyncio.sleep(1)
