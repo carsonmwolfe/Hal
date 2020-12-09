@@ -61,7 +61,6 @@ class Server:
                         self.Progress = str(self.Minute)+":"+"0"+str(self.Background)
                     else:
                         self.Progress = str(self.Minute)+":"+str(self.Background)
-                print(self.Second)
                 import time
                 timenow = datetime.datetime.now()
                 second = (timenow - self.starttime).seconds + self.Secondoffset
@@ -91,11 +90,6 @@ class Server:
                 if self.Player.duration == 0:
                     self.Live = True
                 if self.LeaveVC or self.Skip or (self.Second >= self.Player.duration and not self.Live):
-                    print (self.LeaveVC)
-                    print(self.Skip)
-                    print(self.Live)
-                    print(self.Second)
-                    print(self.Player.duration)
                     self.currentlyplaying=False
                     self.Live = False
                     self.LeaveVC = False
@@ -152,10 +146,10 @@ class Server:
                         em.set_footer(text=get_footer())
                         self.Music_SOS = await self.MusicTextChannel.send(embed = em)
             else:
-                if (datetime.datetime.now() - self.SongEndedTime).seconds >= 30 and self.LeaveMSG == None:
+                if (datetime.datetime.now() - self.SongEndedTime).seconds >= 15 and self.LeaveMSG == None:
                     await self.server.voice_client.disconnect()
-                    self.LeaveMSG = await self.MusicTextChannel.send("`Hal has left the voice channel`")
-                if (datetime.datetime.now() - self.SongEndedTime).seconds >= 120 and self.LeaveMSG != None:
-                    await self.LeaveMSG.delete()
-                    self.LeaveMSG=None
+                    #self.LeaveMSG = await self.MusicTextChannel.send("`Hal has left the voice channel`")
+                #if (datetime.datetime.now() - self.SongEndedTime).seconds >= 30 and self.LeaveMSG != None:
+                #    await self.LeaveMSG.delete()
+                #    self.LeaveMSG=None
             await asyncio.sleep(1)
