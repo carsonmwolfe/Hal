@@ -195,7 +195,7 @@ async def PLAY(message,serverinfo,client):
 
 async def SKIP(message,serverinfo,client):
     if serverinfo[message.guild].Player == None:
-        await message.channel.send("`Hal is not in a voice channel`")
+        await message.channel.send("`Hal is not in a voice channel.`")
     if serverinfo[message.guild].Player!=None:
         if message.guild.voice_client.is_playing():
             serverinfo[message.guild].Skip = True
@@ -230,6 +230,13 @@ async def RESUME (message,serverinfo,client):
     serverinfo[message.guild].Pause= False
     message.guild.voice_client.resume()
 
+async def QUEUE (message,serverinfo,clinet):
+    em = discord.Embed(colour = 3447033)
+    em = discord.Embed(title= "Queue", description=(serverinfo[message.guild].QueueList), colour=3447003)
+    em.set_footer(text=get_footer())
+    await message.channel.send(embed = em)
+
+
 
 
 command["*PLAY"] = PLAY
@@ -237,6 +244,7 @@ command["*SKIP"] = SKIP
 command["*LEAVE"] = LEAVE
 command["*PAUSE"] = PAUSE
 command["*RESUME"] = RESUME
+command["QUEUE"] = QUEUE
 
 for command_name in command.keys():
   commands.append(command_name)
