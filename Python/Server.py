@@ -1,254 +1,167 @@
-import sys
-sys.path.append("../")
 from EssentialPackages import *
-from Command import *
-from Music import *
 from Footer import get_footer
-HAL_ID = 663923530626367509
+from Music import YTDLSource
+import asyncio
 
-async def PLAY(message,serverinfo,client):
-    serverinfo[message.guild].Leave = False
-    serverinfo[message.guild].Skip = False
-    serverinfo[message.guild].pause = False
-    serverinfo[message.guild].resume = False
-    serverinfo[message.guild].songended = False
-    serverinfo[message.guild].SongEndedTime = datetime.datetime.now()
-    serverinfo[message.guild].LeaveVC = True
-    serverinfo[message.guild].MusicAuthor = message.author
-    serverinfo[message.guild].paused = False
-    channel=message.author.voice.channel
-    serverinfo[message.guild].MusicTextChannel = message.channel
-    if message.guild.voice_client == None:
-        await channel.connect()
+class Server:
+    def __init__(self,server):
+        self.Task = None
+        self.Player = None
+        self.MusicAuthor = None
+        self.MusicTextChannel = None
+        self.Skip = False
+        self.LeaveVC = True
+        self.Pause = False
+        self.Resume = False
+        self.currentlyplaying = False
+        self.Queue = []
+        self.Volume = 100
+        self.Live = False
+        self.Progress = ""
+        self.Hour = 0
+        self.Minute = 0
+        self.Second = 0
+        self.Secondoffset = 0
+        self.Seconds = 0
+        self.Background = 0
+        self.Duration = ""
+        self.QueueList = ""
+        self.Music_SOS = None
+        self.server = server
+        self.music_task = None
+        self.everyoneleft = False
+        self.end_time = datetime.datetime.now()
+        self.starttime = datetime.datetime.now()
+        self.loading = False
+        self.mHandler = None
+        self.server=server
+        self.SongEndedTime=datetime.datetime.now()
+        self.LeaveMSG=None
 
-    else:
-        await message.guild.get_member(HAL_ID).edit(voice_channel = channel)
-    if len(serverinfo[message.guild].Queue)<1:
-        serverinfo[message.guild].QueueList="\nNo Songs In Queue"
-    if serverinfo[message.guild].currentlyplaying == True:
-        if channel == None:
-            await message.channel.send("`Please join a voice channel to start a song`")
-            return
-        await message.channel.send("`Song Added To Queue`")
-        query_string = urllib.parse.urlencode({"search_query" : " ".join(str(message.content).split(' ')[1:])})
-        req = "http://www.youtube.com/results?"+query_string
-        with urllib.request.urlopen(req) as html:
-            searchresults=re.findall("watch\?v=(.{11})", requests.get(req).text)
-            link = ("http://www.youtube.com/watch?v=" + searchresults[0])
-            QueueInfo = await YTDLSource.from_url(link,loop = client.loop)
-            print (QueueInfo.title)
-            url = (link)
-        if "youtube.com" in url:
-            from bs4 import BeautifulSoup
-            page=requests.get(url).text
-            soup=BeautifulSoup(page,features='html.parser')
-            name=soup.find('meta',{'property':'og:title'})['content']
-            serverinfo[message.guild].Queue.append([name,url])
-            serverinfo[message.guild].QueueList = ""
-            for x in serverinfo[message.guild].Queue:
-                serverinfo[message.guild].QueueList += "\n" + "["+ str(x[0])+ "]" + "("+str(x[1])+")"
-
-    if serverinfo[message.guild].currentlyplaying == False:
-        serverinfo[message.guild].currentlyplaying = True
-        serverinfo[message.guild].LeaveVC = False
-        if channel == None:
-            await message.channel.send("`Please join a voice channel to start a song`")
-            return
-        query_string = urllib.parse.urlencode({"search_query" : " ".join(str(message.content).split(' ')[1:])})
-        req = "http://www.youtube.com/results?"+query_string
-        with urllib.request.urlopen(req) as html:
-            searchresults=re.findall("watch\?v=(.{11})", requests.get(req).text)
-            link = ("http://www.youtube.com/watch?v=" + searchresults[0])
-            url = (link)
-            serverinfo[message.guild].Player = await YTDLSource.from_url(link,loop = client.loop)
-            serverinfo[message.guild].MusicAuthor = message.author
-            while message.guild.voice_client == None:
-                await message.guild.voice_client.play(Player)
-            serverinfo[message.guild].Player = await YTDLSource.from_url(link,loop = client.loop)
-            minutes = int(serverinfo[message.guild].Player.duration/60)
-            seconds = int(serverinfo[message.guild].Player.duration-(minutes*60))
-            hours = int(minutes/60)
-            if hours > 0:
-                minutes = minutes-(hours*60)
-                if len(str(minutes))==1:
-                    minutes="0"+str(minutes)
-                if len(str(seconds)) == 1:
-                    serverinfo[message.guild].Duration= str(hours)+":"+str(minutes)+":"+"0"+str(seconds)
+    async def update_loop(self):
+        print ("Hal Activated...")
+        while True:
+            if self.currentlyplaying and self.Player != None and self.Music_SOS != None:
+                timenow = datetime.datetime.now()
+                self.SongEndedTime=datetime.datetime.now()
+                self.Background = (timenow - self.starttime).seconds + self.Secondoffset
+                self.Second = (timenow - self.starttime).seconds
+                self.Minute = int(self.Minute)-(self.Hour*60)
+                self.Hour = int(self.Minute/60)
+                if self.Hour > 0:
+                    self.Minute = self.Minute-(self.Hour*60)
+                    if len(str(self.Minute))==1:
+                        self.Minute="0"+str(self.Minute)
+                    if len(str(self.Background)) == 1:
+                        self.Progress= str(self.Hour)+":"+str(self.Minute)+":"+"0"+str(self.Background)
+                    else:
+                        self.Progress = str(self.Hour)+":"+str(self.Minutes)+":"+str(self.Background)
                 else:
-                    serverinfo[message.guild].Duration = str(hours)+":"+str(minutes)+":"+str(seconds)
+                    if len(str(self.Background)) ==1:
+                        self.Progress = str(self.Minute)+":"+"0"+str(self.Background)
+                    else:
+                        self.Progress = str(self.Minute)+":"+str(self.Background)
+                import time
+                timenow = datetime.datetime.now()
+                second = (timenow - self.starttime).seconds + self.Secondoffset
+                Description = str(self.Progress) + "/" + str(self.Duration)
+                if self.Live == True:
+                    Description = "Currently Live"
+                if self.Pause == True:
+                    Description = "Paused"
+                em = discord.Embed(title="" , description=("["+ self.Player.title + "]" "("+self.Player.url+")"+ "\n" + '**' + 'Duration: ' + '**' + '`'  +  Description  + "`" +   '\n' + '**' + 'Volume:  '+ '**' + "``" + str(self.Volume) + "%" + "``" + "\n"  + "**" + "Queue:" + "**" + str(self.QueueList)), colour=3447003)
+                em.set_author(name="Selected By: " + str(self.MusicAuthor),icon_url=self.MusicAuthor.avatar_url)
+                em.set_footer(text=get_footer())
+                try:
+                    await self.Music_SOS.edit(embed=em)
+                except discord.errors.NotFound:
+                     self.Music_SOS = await self.MusicTextChannel.send(embed = em)
+                if self.Second%60 == 30:
+                    await self.Music_SOS.delete()
+                    self.Music_SOS = await self.MusicTextChannel.send(embed = em)
+                if self.Background >= 59:
+                    self.Minute = int(self.Minute)
+                    self.Secondoffset -= 60
+                    self.Minute += 1
+                if self.Minute == 60:
+                    self.Minute = int(self.Minute)
+                    self.Minute = 0
+                    self.Hour += 1
+                if self.Player.duration == 0:
+                    self.Live = True
+                if self.Skip or (self.Second >= self.Player.duration and not self.Live):
+                    print (self.LeaveVC)
+                    print (self.Skip)
+                    print (self.Second)
+                    print (self.Player.duration)
+                    print("LeftVC")
+                    self.currentlyplaying=False
+                    self.Live = False
+                    #self.LeaveVC = False
+                    self.Player = None
+                    self.SongEndedTime = datetime.datetime.now()
+                    print("Song ended")
+                    self.Secondoffset = 0
+                    self.Second = 0
+                    self.Skip = False
+                    self.starttime = datetime.datetime.now()
+                    timenow = datetime.datetime.now()
+                    await self.Music_SOS.delete()
+                    self.Music_SOS = None
+                    if len(self.Queue) > 0:
+                        print("Song in queue")
+                        self.Second = 0
+                        self.Secondoffset = 0
+                        self.starttime = datetime.datetime.now()
+                        timenow = datetime.datetime.now()
+                        #self.Second = (timenow - self.starttime).seconds + self.secondoffset
+                        self.currentlyplaying = True
+                        self.Player = await YTDLSource.from_url(self.Queue[0][1],loop = asyncio.get_event_loop())
+                        self.Secondoffset = (datetime.datetime.now() - timenow).seconds
+                        sec = self.Player.data["duration"]
+                        minutes = int(sec/60)
+                        seconds = int(sec-(minutes*60))
+                        hours = int(minutes/60)
+                        if self.Hour > 0:
+                            minutes = minutes-(hours*60)
+                            if len(str(minutes))==1:
+                                minutes="0"+str(minutes)
+                            if len(str(seconds)) == 1:
+                                self.Duration= str(hours)+":"+str(minutes)+":"+"0"+str(seconds)
+                            else:
+                                self.Duration = str(hours)+":"+str(minutes)+":"+str(seconds)
+                        else:
+                            if len(str(seconds)) ==1:
+                                self.Duration = str(minutes)+":"+"0"+str(seconds)
+                            else:
+                                self.Duration = str(minutes)+":"+str(seconds)
+                        self.Queue.remove(self.Queue[0])
+                        self.QueueList = ""
+                        for x in self.Queue:
+                            self.QueueList += "\n" + "["+ x[0][0] + "]" "("+x[1]+")"
+                        if len(self.Queue)<1:
+                            self.QueueList="\nNo Songs In Queue"
+                        self.server.voice_client.play(self.Player)
+                        self.Skip = False
+                        if self.Live == False:
+                            self.Second = 0
+                            self.Minute = 0
+                        em = discord.Embed(title="" , description=("["+ self.Player.title + "]" "("+self.Player.url+")"+ "\n" + '**' + 'Duration: ' + '**' + '`'  +  Description + "/" + str(self.Duration) + "`" +   '\n' + '**' + 'Volume:  '+ '**' + "``" + str(self.Volume) + "%" + "``" + "\n"  + "**" + "Queue:" + "**" + str(self.QueueList)), colour=3447003)
+                        em.set_author(name="Selected By: " + str(self.MusicAuthor),icon_url=self.MusicAuthor.avatar_url)
+                        em.set_footer(text=get_footer())
+                        self.Music_SOS = await self.MusicTextChannel.send(embed = em)
             else:
-                if len(str(seconds)) ==1:
-                    serverinfo[message.guild].Duration = str(minutes)+":"+"0"+str(seconds)
-                else:
-                    serverinfo[message.guild].Duration = str(minutes)+":"+str(seconds)
-        if serverinfo[message.guild].Player.duration == 0:
-            print("CurrentlyLive")
-            serverinfo[message.guild].Live = True
-        import time
-        sec = serverinfo[message.guild].Player.duration
-        title = serverinfo[message.guild].Player.title
-        em = discord.Embed(title="" , description=("["+ serverinfo[message.guild].Player.title + "]" "("+link+")"+ "\n" + '**' + 'Duration: ' + '**' + '`' + "0:00"  + "/" + str(serverinfo[message.guild].Duration) + "`" +   '\n' + '**' + 'Volume:  '+ '**' + "``" + str(serverinfo[message.guild].Volume) + "%" +  "``" + "\n" + "**" +  "Queue:" + "**" +  "\nNo Songs In Queue" ), colour=3447003)
-        em.set_author(name="Selected By: " + str(message.author),icon_url=message.author.avatar_url)
-        em.set_footer(text=get_footer())
-        serverinfo[message.guild].Music_SOS = await message.channel.send(embed=em)
-        serverinfo[message.guild].Minute = 0
-        serverinfo[message.guild].second = 0
-        serverinfo[message.guild].Hour = 0
-        serverinfo[message.guild].background = 0
-        serverinfo[message.guild].starttime = datetime.datetime.now()
-        serverinfo[message.guild].secondoffset = 0
-        message.guild.voice_client.play(serverinfo[message.guild].Player)
-
-        # while serverinfo[message.guild].Second < sec and not (serverinfo[message.guild].Skip or serverinfo[message.guild].LeaveVC):
-        #     #print("Hal is stupid")
-        #
-        #     print(serverinfo[message.guild].Second)
-        #     print(sec)
-        #
-        #     if serverinfo[message.guild].Leave == True:
-        #         break
-        #     if serverinfo[message.guild].Skip == True:
-        #         break
-        #     import time
-        #     timenow = datetime.datetime.now()
-        #     serverinfo[message.guild].Skip = False
-        #     second = (timenow - serverinfo[message.guild].starttime).seconds + serverinfo[message.guild].secondoffset
-        #     Description = str(serverinfo[message.guild].Progress)
-        #     if serverinfo[message.guild].Live == True:
-        #         Description = "Currently Live"
-        #     if serverinfo[message.guild].Pause == True:
-        #         Description = "Paused"
-        #     em = discord.Embed(title="" , description=("["+ serverinfo[message.guild].Player.title + "]" "("+link+")"+ "\n" + '**' + 'Duration: ' + '**' + '`'  +  Description + "/" + str(serverinfo[message.guild].Duration) + "`" +   '\n' + '**' + 'Volume:  '+ '**' + "``" + str(serverinfo[message.guild].Volume) + "%" + "``" + "\n"  + "**" + "Queue:" + "**" + str(serverinfo[message.guild].QueueList)), colour=3447003)
-        #     em.set_author(name="Selected By: " + str(message.author),icon_url=message.author.avatar_url)
-        #     em.set_footer(text=get_footer())
-        #     print(Description)
-        #     try:
-        #         await serverinfo[message.guild].Music_SOS.edit(embed=em)
-        #
-        #     except discord.errors.NotFound:
-        #          serverinfo[message.guild].Music_SOS = await message.channel.send(embed = em)
-        #
-        #     if serverinfo[message.guild].Leave or serverinfo[message.guild].Skip == True:
-        #         break
-        #
-        #     if serverinfo[message.guild].second == 30:
-        #         await serverinfo[message.guild].Music_SOS.delete()
-        #         serverinfo[message.guild].Music_SOS = await message.channel.send(embed = em)
-        #     if serverinfo[message.guild].Background >= 59:
-        #         serverinfo[message.guild].Minute = int(serverinfo[message.guild].Minute)
-        #         serverinfo[message.guild].Secondoffset -= 60
-        #         serverinfo[message.guild].Minute += 1
-        #     if serverinfo[message.guild].Minute == 60:
-        #         serverinfo[message.guild].Minute = int(serverinfo[message.guild].Minute)
-        #         serverinfo[message.guild].Minute = 0
-        #         serverinfo[message.guild].Hour += 1
-        #     await asyncio.sleep(1)
-
-        # serverinfo[message.guild].Secondoffset = 0
-        # serverinfo[message.guild].Second = 0
-        # serverinfo[message.guild].starttime = datetime.datetime.now()
-        # timenow = datetime.datetime.now()
-        # serverinfo[message.guild].Second = 0
-        # print ("Song is done")
-        # await serverinfo[message.guild].Music_SOS.delete()
-        # serverinfo[message.guild].currentlyplaying = False
-        # if len(serverinfo[message.guild].Queue) == 0:
-        #     return
-        # if len(serverinfo[message.guild].Queue) > 0:
-        #     serverinfo[message.guild].Second = 0
-        #     serverinfo[message.guild].Secondoffset = 0
-        #     serverinfo[message.guild].starttime = datetime.datetime.now()
-        #     timenow = datetime.datetime.now()
-        #     #serverinfo[message.guild].Second = (timenow - serverinfo[message.guild].starttime).seconds + serverinfo[message.guild].secondoffset
-        #     currentlyplaying = True
-        #     serverinfo[message.guild].Player = await YTDLSource.from_url(serverinfo[message.guild].Queue[0][1],loop = client.loop)
-        #     serverinfo[message.guild].Secondoffset = (datetime.datetime.now() - timenow).seconds
-        #     sec = serverinfo[message.guild].Player.data["duration"]
-        #     minutes = int(sec/60)
-        #     seconds = int(sec-(minutes*60))
-        #     hours = int(minutes/60)
-        #     if serverinfo[message.guild].Hour > 0:
-        #         minutes = minutes-(hours*60)
-        #         if len(str(minutes))==1:
-        #             minutes="0"+str(minutes)
-        #         if len(str(seconds)) == 1:
-        #             serverinfo[message.guild].Duration= str(hours)+":"+str(minutes)+":"+"0"+str(seconds)
-        #         else:
-        #             serverinfo[message.guild].Duration = str(hours)+":"+str(minutes)+":"+str(seconds)
-        #     else:
-        #         if len(str(seconds)) ==1:
-        #             serverinfo[message.guild].Duration = str(minutes)+":"+"0"+str(seconds)
-        #         else:
-        #             serverinfo[message.guild].Duration = str(minutes)+":"+str(seconds)
-        #     serverinfo[message.guild].Queue.remove(serverinfo[message.guild].Queue[0])
-        #     serverinfo[message.guild].QueueList = ""
-        #     for x in serverinfo[message.guild].Queue:
-        #         serverinfo[message.guild].QueueList += "\n" + "["+ x[0][0] + "]" "("+x[1]+")"
-        #     if len(serverinfo[message.guild].Queue)<1:
-        #         serverinfo[message.guild].QueueList="\nNo Songs In Queue"
-        #     message.guild.voice_client.play(serverinfo[message.guild].Player)
-        #     serverinfo[message.guild].Skip = False
-        #     if serverinfo[message.guild].Live == False:
-        #         serverinfo[message.guild].Second = 0
-        #         serverinfo[message.guild].Minute = 0
-        #     em = discord.Embed(title="" , description=("["+ serverinfo[message.guild].Player.title + "]" "("+link+")"+ "\n" + '**' + 'Duration: ' + '**' + '`'  +  Description + "/" + str(serverinfo[message.guild].Duration) + "`" +   '\n' + '**' + 'Volume:  '+ '**' + "``" + str(serverinfo[message.guild].Volume) + "%" + "``" + "\n"  + "**" + "Queue:" + "**" + str(serverinfo[message.guild].QueueList)), colour=3447003)
-        #     em.set_author(name="Selected By: " + str(message.author),icon_url=message.author.avatar_url)
-        #     em.set_footer(text=get_footer())
-        #     serverinfo[message.guild].Music_SOS = await message.channel.send(embed = em)
-
-
-async def SKIP(message,serverinfo,client):
-    if serverinfo[message.guild].Player == None:
-        await message.channel.send("`Hal is not in a voice channel.`")
-    if serverinfo[message.guild].Player!=None:
-        if message.guild.voice_client.is_playing():
-            serverinfo[message.guild].Skip = True
-            serverinfo[message.guild].Resume = True
-            serverinfo[message.guild].Pause= False
-            message.guild.voice_client.stop()
-            serverinfo[message.guild].Background = 0
-            serverinfo[message.guild].songended = True
-            serverinfo[message.guild].secondoffset = 0
-        await message.channel.send("`Song Skipped`")
-
-async def LEAVE (message,serverinfo,client):
-    if serverinfo[message.guild].Player == None:
-            await message.channel.send("`Hal Is Not In A Voice Channel`")
-    if serverinfo[message.guild].Player != None:
-        print ("Leave")
-        serverinfo[message.guild].Leave = True
-        serverinfo[message.guild].Skip = True
-        serverinfo[message.guild].Queue = []
-        await message.guild.voice_client.disconnect()
-        #Player = None
-        await message.channel.send("`Hal has been disconnected from the voice channel`")
-
-async def PAUSE (message,serverinfo,client):
-    serverinfo[message.guild].Pause = True
-    serverinfo[message.guild].Resume = False
-    message.guild.voice_client.pause()
-
-async def RESUME (message,serverinfo,client):
-    await message.channel.send("`Music Resumed.`")
-    serverinfo[message.guild].Resume = True
-    serverinfo[message.guild].Pause= False
-    message.guild.voice_client.resume()
-
-async def QUEUE (message,serverinfo,clinet):
-    em = discord.Embed(colour = 3447033)
-    em = discord.Embed(title= "Queue", description=(serverinfo[message.guild].QueueList), colour=3447003)
-    em.set_footer(text=get_footer())
-    await message.channel.send(embed = em)
-
-
-
-
-command["*PLAY"] = PLAY
-command["*SKIP"] = SKIP
-command["*LEAVE"] = LEAVE
-command["*PAUSE"] = PAUSE
-command["*RESUME"] = RESUME
-command["QUEUE"] = QUEUE
-
-for command_name in command.keys():
-  commands.append(command_name)
+                if (datetime.datetime.now() - self.SongEndedTime).seconds >= 15 and self.LeaveMSG == None and self.LeaveVC == False:
+                    print (self.LeaveVC)
+                    print (self.Skip)
+                    print (self.Second)
+                    
+                    self.LeaveVC = True
+                    print("Left")
+                    self.Skip = True
+                    await self.server.voice_client.disconnect()
+                    #self.LeaveMSG = await self.MusicTextChannel.send("`Hal has left the voice channel`")
+                #if (datetime.datetime.now() - self.SongEndedTime).seconds >= 30 and self.LeaveMSG != None:
+                #    await self.LeaveMSG.delete()
+                #    self.LeaveMSG=None
+            await asyncio.sleep(1)
