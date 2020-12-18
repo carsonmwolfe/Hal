@@ -12,12 +12,15 @@ async def PLAY(message,serverinfo,client):
     serverinfo[message.guild].pause = False
     serverinfo[message.guild].resume = False
     serverinfo[message.guild].songended = False
+    serverinfo[message.guild].SongEndedTime = datetime.datetime.now()
+    serverinfo[message.guild].LeaveVC = True
     serverinfo[message.guild].MusicAuthor = message.author
     serverinfo[message.guild].paused = False
     channel=message.author.voice.channel
     serverinfo[message.guild].MusicTextChannel = message.channel
     if message.guild.voice_client == None:
         await channel.connect()
+
     else:
         await message.guild.get_member(HAL_ID).edit(voice_channel = channel)
     if len(serverinfo[message.guild].Queue)<1:
@@ -47,6 +50,7 @@ async def PLAY(message,serverinfo,client):
 
     if serverinfo[message.guild].currentlyplaying == False:
         serverinfo[message.guild].currentlyplaying = True
+        serverinfo[message.guild].LeaveVC = False
         if channel == None:
             await message.channel.send("`Please join a voice channel to start a song`")
             return
