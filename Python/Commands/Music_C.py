@@ -219,20 +219,28 @@ async def LEAVE (message,serverinfo,client):
         serverinfo[message.guild].Leave = True
         serverinfo[message.guild].Skip = True
         serverinfo[message.guild].Queue = []
+        serverinfo[message.guild].Resume = True
+        serverinfo[message.guild].Pause= False
         await message.guild.voice_client.disconnect()
         #Player = None
         await message.channel.send("`Hal has been disconnected from the voice channel`")
 
 async def PAUSE (message,serverinfo,client):
-    serverinfo[message.guild].Pause = True
-    serverinfo[message.guild].Resume = False
-    message.guild.voice_client.pause()
+    if serverinfo[message.guild].Pause == False:
+        serverinfo[message.guild].Pause = True
+        serverinfo[message.guild].Resume = False
+        message.guild.voice_client.pause()
+    else:
+        await message.channel.send("`Music Already Paused.`")
 
 async def RESUME (message,serverinfo,client):
-    await message.channel.send("`Music Resumed.`")
-    serverinfo[message.guild].Resume = True
-    serverinfo[message.guild].Pause= False
-    message.guild.voice_client.resume()
+    if serverinfo[message.guild].Resume == False:
+        await message.channel.send("`Music Resumed.`")
+        serverinfo[message.guild].Resume = True
+        serverinfo[message.guild].Pause= False
+        message.guild.voice_client.resume()
+    else:
+        await message.channel.send("`Music Already Unpaused.`")
 
 async def QUEUE (message,serverinfo,clinet):
     em = discord.Embed(colour = 3447033)
@@ -240,15 +248,12 @@ async def QUEUE (message,serverinfo,clinet):
     em.set_footer(text=get_footer())
     await message.channel.send(embed = em)
 
-
-
-
 command["*PLAY"] = PLAY
 command["*SKIP"] = SKIP
 command["*LEAVE"] = LEAVE
 command["*PAUSE"] = PAUSE
 command["*RESUME"] = RESUME
-command["QUEUE"] = QUEUE
+command["*QUEUE"] = QUEUE
 
 for command_name in command.keys():
   commands.append(command_name)
