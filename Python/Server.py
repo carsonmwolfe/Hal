@@ -151,11 +151,10 @@ class Server:
                         em.set_footer(text=get_footer())
                         self.Music_SOS = await self.MusicTextChannel.send(embed = em)
             else:
-                if (datetime.datetime.now() - self.SongEndedTime).seconds >= 15 and self.LeaveMSG == None and self.LeaveVC == False:
+                if (datetime.datetime.now() - self.SongEndedTime).seconds >= 120 and self.LeaveMSG == None and self.LeaveVC == False:
                     print (self.LeaveVC)
                     print (self.Skip)
                     print (self.Second)
-                    
                     self.LeaveVC = True
                     print("Left")
                     self.Skip = True
