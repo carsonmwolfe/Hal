@@ -16,6 +16,8 @@ async def RESTART (message,serverinfo,client):
             await message.channel.send("`This Command Is A Creator Only Command.`")
     if message.author.id==CREATOR_ID:
         await message.channel.send("`Hal Is Restarting...`")
+        client.loop.run_until_complete(client.logout())
+        os.system("python3 /usr/bin/python3.6 /home/pi/Hal.py")
         raise SystemExit
     
 
