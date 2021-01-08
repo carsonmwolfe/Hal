@@ -11,6 +11,11 @@ HAL is a discord bot coded in python3.6. HAL has been in development since Janua
 ###### Python3.x required 
 ###### Raspberry Pi required 
 
+### Cloning Hal
+
+``` cd ~ 
+git clone https://github.com/Darkarea51/Hal ```
+
 ### Running HAL
 
 ```  cd /home/pi/Desktop/HAL/Restart.py ```
