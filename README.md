@@ -14,7 +14,7 @@ HAL is a discord bot coded in python3.6. HAL has been in development since Janua
 ### Cloning Hal
 
 ``` cd ~ 
-git clone https://github.com/Darkarea51/Hal ```
+git clone https://github.com/Darkarea51/Hal 
 ```
 
 ### Running HAL
