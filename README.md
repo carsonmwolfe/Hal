@@ -1,6 +1,5 @@
 ![alt text](https://cdn.discordapp.com/avatars/663923530626367509/83dcf1500d48a46b8cc77e40e828e6ec.webp?size=1024)
-# Hal
-# Out Of Date
+# Hal (Out of Date as of March 18, 2022)
 
 
 [![Codacy Badge](https://app.codacy.com/project/badge/Grade/f847011b6ed34c468d01863313b11e72)](https://www.codacy.com?utm_source=github.com&amp;utm_medium=referral&amp;utm_content=Darkarea51/Picking-Flowers-MAZE&amp;utm_campaign=Badge_Grade)
